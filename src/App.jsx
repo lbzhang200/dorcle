@@ -243,11 +243,20 @@ function QuizScreen({ quiz, onFinish, onBack }) {
       )}
 
       <div className="answer-grid">
-        {quiz.answers.map((answer, idx) => (
-          <div key={idx} className={`answer-slot ${foundSet.has(idx) ? 'answer-found' : ''}`}>
-            {foundSet.has(idx) ? answer : ''}
-          </div>
-        ))}
+        {quiz.answers.map((answer, idx) => {
+          const found = foundSet.has(idx)
+          const revealed = found || finished
+          return (
+            <div
+              key={idx}
+              className={`answer-slot ${found ? 'answer-found' : ''} ${
+                finished && !found ? 'answer-missed' : ''
+              }`}
+            >
+              {revealed ? answer : ''}
+            </div>
+          )
+        })}
       </div>
     </div>
   )
