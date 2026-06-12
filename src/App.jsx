@@ -54,7 +54,16 @@ function formatTime(seconds) {
   return `${m}:${s.toString().padStart(2, '0')}`
 }
 
-function HomeScreen({ quizzes, onSelectQuiz, onShowStats, onGenerateQuiz, generating, generateError }) {
+function HomeScreen({
+  quizzes,
+  onSelectQuiz,
+  onShowStats,
+  onGenerateQuiz,
+  generating,
+  generateError,
+  apiKey,
+  onApiKeyChange,
+}) {
   const [prompt, setPrompt] = useState('')
 
   return (
@@ -95,7 +104,28 @@ function HomeScreen({ quizzes, onSelectQuiz, onShowStats, onGenerateQuiz, genera
 
       <div className="generate-section">
         <h3>Generate a Quiz</h3>
-        <p className="generate-hint">Describe a quiz concept and AI will build it for you.</p>
+        <p className="generate-hint">
+          Describe a quiz concept and AI will build it for you. Requires your own{' '}
+          <a
+            href="https://console.anthropic.com/settings/keys"
+            target="_blank"
+            rel="noreferrer"
+            className="generate-link"
+          >
+            Anthropic API key
+          </a>{' '}
+          (kept only in memory for this session, never saved).
+        </p>
+        <div className="generate-row">
+          <input
+            className="text-input"
+            type="password"
+            placeholder="sk-ant-..."
+            value={apiKey}
+            onChange={(e) => onApiKeyChange(e.target.value)}
+            disabled={generating}
+          />
+        </div>
         <div className="generate-row">
           <input
             className="text-input"
@@ -273,6 +303,7 @@ export default function App() {
   })
   const [generating, setGenerating] = useState(false)
   const [generateError, setGenerateError] = useState('')
+  const [apiKey, setApiKey] = useState('')
 
   function handleSelectQuiz(quiz) {
     setActiveQuiz(quiz)
@@ -293,6 +324,10 @@ export default function App() {
   }
 
   async function handleGenerateQuiz(promptText) {
+    if (!apiKey.trim()) {
+      setGenerateError('Enter your Anthropic API key first.')
+      return
+    }
     setGenerating(true)
     setGenerateError('')
     try {
@@ -300,6 +335,8 @@ export default function App() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
+          'x-api-key': apiKey.trim(),
+          'anthropic-version': '2023-06-01',
           'anthropic-dangerous-direct-browser-access': 'true',
         },
         body: JSON.stringify({
@@ -315,6 +352,9 @@ export default function App() {
       })
 
       if (!response.ok) {
+        if (response.status === 401) {
+          throw new Error('Invalid API key (401). Double-check your key and try again.')
+        }
         throw new Error(`API request failed (${response.status})`)
       }
 
@@ -355,6 +395,8 @@ export default function App() {
           onGenerateQuiz={handleGenerateQuiz}
           generating={generating}
           generateError={generateError}
+          apiKey={apiKey}
+          onApiKeyChange={setApiKey}
         />
       )}
       {screen === 'stats' && <StatsScreen stats={stats} onBack={handleBackHome} />}
